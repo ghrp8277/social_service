@@ -93,11 +93,24 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
 
     @Override
     public void createPost(CreatePostRequest request, StreamObserver<Response> responseObserver) {
-        Post post = socialService.createPost(request.getUserId(), request.getTitle(), request.getAuthor(), request.getAccountName(), request.getContent());
-        Map<String, Object> response = new HashMap<>();
-        response.put("post_id", post.getId());
-        response.put("user_id", post.getUserId());
-        grpcResponseHelper.sendJsonResponse("post", response, responseObserver);
+        try {
+            Post post = socialService.createPost(
+                    request.getUserId(),
+                    request.getTitle(),
+                    request.getAuthor(),
+                    request.getAccountName(),
+                    request.getContent(),
+                    request.getStockCode()
+            );
+            Map<String, Object> response = new HashMap<>();
+            response.put("post_id", post.getId());
+            response.put("user_id", post.getUserId());
+            response.put("post_stock_name", post.getPostStock().getStockName());
+            response.put("post_stock_code", post.getPostStock().getStockCode());
+            grpcResponseHelper.sendJsonResponse("post", response, responseObserver);
+        } catch (RuntimeException e) {
+            grpcResponseHelper.sendErrorResponse("Failed to create post: " + e.getMessage(), responseObserver);
+        }
     }
 
     @Override

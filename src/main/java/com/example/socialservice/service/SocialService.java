@@ -34,6 +34,9 @@ public class SocialService {
     @Autowired
     private LikeRepository likeRepository;
 
+    @Autowired
+    private PostStockRepository postStockRepository;
+
     public PostDto convertToDto(Post post) {
         return PostDto.fromEntity(post);
     }
@@ -88,13 +91,19 @@ public class SocialService {
     }
 
     @Transactional
-    public Post createPost(Long userId, String title, String author, String accountName, String content) {
+    public Post createPost(Long userId, String title, String author, String accountName, String content, Long stockCode) {
         Post post = new Post();
         post.setUserId(userId);
         post.setTitle(title);
         post.setAuthor(author);
         post.setAccountName(accountName);
         post.setContent(content);
+
+        PostStock postStock = postStockRepository.findByStockCode(stockCode)
+                .orElseThrow(() -> new RuntimeException("PostStock not found for stockCode: " + stockCode));
+
+        post.setPostStock(postStock);
+
         Post savedPost = postRepository.save(post);
         logActivity(userId, "post", savedPost.getId(), String.format("User %d created a post with ID %d", userId, savedPost.getId()));
         return savedPost;

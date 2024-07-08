@@ -1,0 +1,123 @@
+package com.example.socialservice.constants;
+
+import java.util.Map;
+
+public class NaverSymbolConstants {
+    public static class Market {
+        public static final String KOSPI = "KOSPI";
+        public static final String KOSDAQ = "KOSDAQ";
+    }
+
+    public static class KOSPI {
+        public static final Map<Long, String> SYMBOLS = Map.ofEntries(
+                Map.entry(5930L, "삼성전자"),
+                Map.entry(373220L, "LG에너지솔루션"),
+                Map.entry(450080L, "에코프로머티리얼즈"),
+                Map.entry(660L, "SK하이닉스"),
+                Map.entry(66970L, "LNF"),
+                Map.entry(5380L, "현대차"),
+                Map.entry(207940L, "삼성바이오로직스"),
+                Map.entry(5935L, "삼성전자우"),
+                Map.entry(270L, "기아"),
+                Map.entry(68270L, "셀트리온"),
+                Map.entry(105560L, "KB금융"),
+                Map.entry(5490L, "POSCO홀딩스"),
+                Map.entry(55550L, "신한지주"),
+                Map.entry(35420L, "NAVER"),
+                Map.entry(28260L, "삼성물산"),
+                Map.entry(6400L, "삼성SDI"),
+                Map.entry(51910L, "LG화학"),
+                Map.entry(12330L, "현대모비스"),
+                Map.entry(3670L, "포스코퓨처엠"),
+                Map.entry(86790L, "하나금융지주"),
+                Map.entry(32830L, "삼성생명"),
+                Map.entry(35720L, "카카오"),
+                Map.entry(810L, "삼성화재"),
+                Map.entry(66570L, "LG전자"),
+                Map.entry(138040L, "메리츠금융지주"),
+                Map.entry(42700L, "한미반도체"),
+                Map.entry(11200L, "HMM"),
+                Map.entry(329180L, "HD현대중공업"),
+                Map.entry(259960L, "크래프톤"),
+                Map.entry(3550L, "LG"),
+                Map.entry(402340L, "SK스퀘어"),
+                Map.entry(34020L, "두산에너빌리티"),
+                Map.entry(15760L, "한국전력"),
+                Map.entry(12450L, "한화에어로스페이스"),
+                Map.entry(18260L, "삼성에스디에스"),
+                Map.entry(9150L, "삼성전기"),
+                Map.entry(33780L, "KT&G"),
+                Map.entry(24110L, "기업은행"),
+                Map.entry(9540L, "HD한국조선해양"),
+                Map.entry(267260L, "HD현대일렉트릭"),
+                Map.entry(34730L, "SK"),
+                Map.entry(10130L, "고려아연"),
+                Map.entry(17670L, "SK텔레콤"),
+                Map.entry(316140L, "우리금융지주"),
+                Map.entry(96770L, "SK이노베이션"),
+                Map.entry(323410L, "카카오뱅크"),
+                Map.entry(47050L, "포스코인터내셔널"),
+                Map.entry(86280L, "현대글로비스"),
+                Map.entry(42660L, "한화오션"),
+                Map.entry(30200L, "KT"),
+                Map.entry(459580L, "KODEX CD금리액티브(합성)"),
+                Map.entry(90430L, "아모레퍼시픽")
+        );
+    }
+
+    public static class KOSDAQ {
+        public static final Map<Long, String> SYMBOLS = Map.ofEntries(
+                Map.entry(247540L, "에코프로비엠"),
+                Map.entry(196170L, "알테오젠"),
+                Map.entry(86520L, "에코프로"),
+                Map.entry(28300L, "HLB"),
+                Map.entry(348370L, "엔켐"),
+                Map.entry(250L, "삼천당제약"),
+                Map.entry(68760L, "셀트리온제약"),
+                Map.entry(58470L, "리노공업"),
+                Map.entry(214150L, "클래시스"),
+                Map.entry(403870L, "HPSP"),
+                Map.entry(277810L, "레인보우로보틱스"),
+                Map.entry(263750L, "펄어비스"),
+                Map.entry(145020L, "휴젤"),
+                Map.entry(141080L, "리가켐바이오"),
+                Map.entry(257720L, "실리콘투"),
+                Map.entry(89030L, "테크윙"),
+                Map.entry(39030L, "이오테크닉스"),
+                Map.entry(357780L, "솔브레인"),
+                Map.entry(78600L, "대주전자재료"),
+                Map.entry(5290L, "동진쎄미켐"),
+                Map.entry(35900L, "JYP Ent."),
+                Map.entry(240810L, "원익IPS"),
+                Map.entry(178320L, "서진시스템"),
+                Map.entry(41510L, "에스엠"),
+                Map.entry(36930L, "주성엔지니어링"),
+                Map.entry(204270L, "제이앤티씨"),
+                Map.entry(65350L, "신성델타테크"),
+                Map.entry(36830L, "솔브레인홀딩스"),
+                Map.entry(237690L, "에스티팜"),
+                Map.entry(293490L, "카카오게임즈"),
+                Map.entry(417200L, "LS머트리얼즈"),
+                Map.entry(64760L, "티씨케이"),
+                Map.entry(35760L, "CJ ENM"),
+                Map.entry(39200L, "오스코텍"),
+                Map.entry(137400L, "피엔티"),
+                Map.entry(112040L, "위메이드"),
+                Map.entry(232140L, "와이씨"),
+                Map.entry(121600L, "나노신소재"),
+                Map.entry(214450L, "파마리서치"),
+                Map.entry(67160L, "SOOP"),
+                Map.entry(33100L, "제룡전기"),
+                Map.entry(140860L, "파크시스템스"),
+                Map.entry(298380L, "에이비엘바이오"),
+                Map.entry(31980L, "피에스케이홀딩스"),
+                Map.entry(328130L, "루닛"),
+                Map.entry(95340L, "ISC"),
+                Map.entry(87010L, "펩트론"),
+                Map.entry(166090L, "하나머티리얼즈"),
+                Map.entry(225570L, "넥슨게임즈"),
+                Map.entry(352480L, "씨앤씨인터내셔널")
+        );
+    }
+}
+
