@@ -90,6 +90,12 @@ public class SocialService {
         return postRepository.findAllPosts(pageRequest);
     }
 
+    @Transactional(readOnly = true)
+    public Page<Post> searchPosts(String keyword, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size);
+        return postRepository.findByTitleContainingOrAuthorContainingOrContentContaining(keyword, keyword, keyword, pageRequest);
+    }
+
     @Transactional
     public Post createPost(Long userId, String title, String author, String accountName, String content, Long stockCode) {
         Post post = new Post();

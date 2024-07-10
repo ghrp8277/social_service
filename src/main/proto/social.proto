@@ -15,6 +15,7 @@ service SocialService {
     rpc CreatePost(CreatePostRequest) returns (Response);
     rpc UpdatePost(UpdatePostRequest) returns (Response);
     rpc DeletePost(DeletePostRequest) returns (Response);
+    rpc SearchPosts(SearchPostsRequest) returns (Response);
     rpc IncrementPostViews(IncrementPostViewsRequest) returns (Response);
     rpc IncrementPostLikes(IncrementPostLikesRequest) returns (Response);
     rpc DecrementPostLikes(DecrementPostLikesRequest) returns (Response);
@@ -51,6 +52,12 @@ message GetPostByIdRequest {
 message GetPostsRequest {
     uint32 page = 1;
     uint32 pageSize = 2;
+}
+
+message SearchPostsRequest {
+    string keyword = 1;
+    uint32 page = 2;
+    uint32 pageSize = 3;
 }
 
 message CreatePostRequest {

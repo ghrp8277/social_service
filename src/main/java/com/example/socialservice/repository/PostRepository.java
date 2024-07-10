@@ -16,4 +16,5 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Optional<Post> findById(Long id);
     @Query("SELECT p FROM Post p")
     Page<Post> findAllPosts(Pageable pageable);
+    Page<Post> findByTitleContainingOrAuthorContainingOrContentContaining(String title, String author, String content, Pageable pageable);
 }

@@ -92,6 +92,26 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
     }
 
     @Override
+    public void searchPosts(SearchPostsRequest request, StreamObserver<Response> responseObserver) {
+        try {
+            Page<Post> postsPage = socialService.searchPosts(request.getKeyword(), request.getPage(), request.getPageSize());
+            List<PostDto> postDtos = postsPage.getContent().stream()
+                .map(socialService::convertToDto)
+                .collect(Collectors.toList());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("total_pages", postsPage.getTotalPages());
+            response.put("total_elements", postsPage.getTotalElements());
+            response.put("current_page", postsPage.getNumber());
+            response.put("posts", postDtos);
+
+            grpcResponseHelper.sendJsonResponse("posts", response, responseObserver);
+        } catch (Exception e) {
+            grpcResponseHelper.sendErrorResponse("Failed to process response", responseObserver);
+        }
+    }
+
+    @Override
     public void createPost(CreatePostRequest request, StreamObserver<Response> responseObserver) {
         try {
             Post post = socialService.createPost(
