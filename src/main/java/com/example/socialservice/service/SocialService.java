@@ -2,6 +2,8 @@ package com.example.socialservice.service;
 
 import com.example.socialservice.dto.PostDto;
 import com.example.socialservice.entity.*;
+import com.example.socialservice.exception.*;
+import com.example.socialservice.exception.error.ErrorMessages;
 import com.example.socialservice.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,16 +45,16 @@ public class SocialService {
 
     @Transactional
     public Follow followUser(Long followerId, Long followeeId) {
-        if (!followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
-            Follow follow = new Follow();
-            follow.setFollowerId(followerId);
-            follow.setFolloweeId(followeeId);
-            followRepository.save(follow);
-            logActivity(followerId, "follow", followeeId, String.format("User %d followed user %d", followerId, followeeId));
-            return follow;
+        if (followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
+            throw new FollowAlreadyExistsException();
         }
 
-        return followRepository.findByFollowerIdAndFolloweeId(followerId, followeeId).orElse(null);
+        Follow follow = new Follow();
+        follow.setFollowerId(followerId);
+        follow.setFolloweeId(followeeId);
+        followRepository.save(follow);
+        logActivity(followerId, "follow", followeeId, String.format("User %d followed user %d", followerId, followeeId));
+        return follow;
     }
 
     @Transactional
@@ -67,7 +69,7 @@ public class SocialService {
             return follow;
         }
 
-        return null;
+        throw new NoFollowRelationshipException();
     }
 
     public List<Follow> getFollowers(Long userId) {
@@ -81,6 +83,10 @@ public class SocialService {
     @Transactional(readOnly = true)
     public Optional<PostDto> getPostById(Long id) {
         Optional<Post> post = postRepository.findById(id);
+
+        if (post.isEmpty()) {
+            throw new PostNotFoundException();
+        }
         return post.map(PostDto::fromEntityWithComments);
     }
 
@@ -106,7 +112,7 @@ public class SocialService {
         post.setContent(content);
 
         PostStock postStock = postStockRepository.findByStockCode(stockCode)
-                .orElseThrow(() -> new RuntimeException("PostStock not found for stockCode: " + stockCode));
+                .orElseThrow(PostStockNotFoundException::new);
 
         post.setPostStock(postStock);
 
@@ -117,9 +123,9 @@ public class SocialService {
 
     @Transactional
     public Post updatePost(Long postId, Long userId, String title, String content) {
-        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+        Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
         if (!post.getUserId().equals(userId)) {
-            throw new RuntimeException("User not authorized to update this post");
+            throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED_UPDATE_POST);
         }
         post.setTitle(title);
         post.setContent(content);
@@ -130,9 +136,9 @@ public class SocialService {
 
     @Transactional
     public void deletePost(Long postId, Long userId) {
-        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+        Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
         if (!post.getUserId().equals(userId)) {
-            throw new RuntimeException("User not authorized to delete this post");
+            throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED_DELETE_POST);
         }
         postRepository.deleteById(postId);
         logActivity(userId, "delete_post", postId, String.format("User %d deleted post with ID %d", userId, postId));
@@ -140,18 +146,18 @@ public class SocialService {
 
     @Transactional
     public Post incrementPostViews(Long postId) {
-        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+        Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
         post.incrementViews();
         return postRepository.save(post);
     }
 
     @Transactional
     public Post incrementPostLikes(Long postId, Long userId) {
-        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+        Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
 
         boolean alreadyLiked = likeRepository.findByUserIdAndPostId(userId, postId).isPresent();
         if (alreadyLiked) {
-            throw new RuntimeException("User has already liked this post");
+            throw new UserAlreadyLikedException();
         }
 
         Like like = new Like();
@@ -166,10 +172,10 @@ public class SocialService {
 
     @Transactional
     public Post decrementPostLikes(Long postId, Long userId) {
-        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+        Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
 
         Like like = likeRepository.findByUserIdAndPostId(userId, postId)
-            .orElseThrow(() -> new RuntimeException("User has not liked this post"));
+            .orElseThrow(UserNotLikedException::new);
 
         likeRepository.delete(like);
 
@@ -180,17 +186,17 @@ public class SocialService {
 
     @Transactional
     public Comment incrementCommentLikes(Long commentId, Long userId) {
-        Comment comment = commentRepository.findById(commentId).orElseThrow(() -> new RuntimeException("Comment not found"));
+        Comment comment = commentRepository.findById(commentId).orElseThrow(CommentNotFoundException::new);
 
         Long postId = comment.getPost().getId();
         boolean postExists = postRepository.existsById(postId);
         if (!postExists) {
-            throw new RuntimeException("Post not found for the given comment");
+            throw new PostNotFoundForCommentException();
         }
 
         boolean alreadyLiked = likeRepository.findByUserIdAndCommentId(userId, commentId).isPresent();
         if (alreadyLiked) {
-            throw new RuntimeException("User has already liked this comment");
+            throw new UserAlreadyLikedException();
         }
 
         Like like = new Like();
@@ -205,16 +211,16 @@ public class SocialService {
 
     @Transactional
     public Comment decrementCommentLikes(Long commentId, Long userId) {
-        Comment comment = commentRepository.findById(commentId).orElseThrow(() -> new RuntimeException("Comment not found"));
+        Comment comment = commentRepository.findById(commentId).orElseThrow(CommentNotFoundException::new);
 
         Long postId = comment.getPost().getId();
         boolean postExists = postRepository.existsById(postId);
         if (!postExists) {
-            throw new RuntimeException("Post not found for the given comment");
+            throw new PostNotFoundForCommentException();
         }
 
         Like like = likeRepository.findByUserIdAndCommentId(userId, commentId)
-            .orElseThrow(() -> new RuntimeException("User has not liked this comment"));
+            .orElseThrow(UserNotLikedException::new);
 
         likeRepository.delete(like);
 
@@ -225,7 +231,7 @@ public class SocialService {
 
     @Transactional
     public Comment createComment(Long postId, Long userId, String content) {
-        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+        Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
         Comment comment = new Comment();
         comment.setPost(post); // Post 객체를 설정
         comment.setUserId(userId);
@@ -237,8 +243,8 @@ public class SocialService {
 
     @Transactional
     public Comment createReply(Long postId, Long userId, Long parentCommentId, String content) {
-        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
-        Comment parentComment = commentRepository.findById(parentCommentId).orElseThrow(() -> new RuntimeException("Parent comment not found"));
+        Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
+        Comment parentComment = commentRepository.findById(parentCommentId).orElseThrow(ParentCommentNotFoundException::new);
         Comment reply = new Comment();
         reply.setPost(post); // Post 객체를 설정
         reply.setUserId(userId);
@@ -251,9 +257,9 @@ public class SocialService {
 
     @Transactional
     public Comment updateComment(Long commentId, Long userId, String content) {
-        Comment comment = commentRepository.findById(commentId).orElseThrow(() -> new RuntimeException("Comment not found"));
+        Comment comment = commentRepository.findById(commentId).orElseThrow(CommentNotFoundException::new);
         if (!comment.getUserId().equals(userId)) {
-            throw new RuntimeException("User not authorized to update this comment");
+            throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED_UPDATE_COMMENT);
         }
         comment.setContent(content);
         Comment updatedComment = commentRepository.save(comment);
@@ -263,9 +269,9 @@ public class SocialService {
 
     @Transactional
     public void deleteComment(Long commentId, Long userId) {
-        Comment comment = commentRepository.findById(commentId).orElseThrow(() -> new RuntimeException("Comment not found"));
+        Comment comment = commentRepository.findById(commentId).orElseThrow(CommentNotFoundException::new);
         if (!comment.getUserId().equals(userId)) {
-            throw new RuntimeException("User not authorized to delete this comment");
+            throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED_DELETE_COMMENT);
         }
         commentRepository.deleteById(commentId);
         logActivity(userId, "delete_comment", commentId, String.format("User %d deleted comment with ID %d", userId, commentId));
@@ -274,7 +280,7 @@ public class SocialService {
     @Transactional
     public void markActivityAsRead(Long activityId) {
         Activity activity = activityRepository.findById(activityId)
-            .orElseThrow(() -> new RuntimeException("Activity not found"));
+            .orElseThrow(ActivityNotFoundException::new);
         activity.setRead(true);
         activityRepository.save(activity);
     }
@@ -314,7 +320,7 @@ public class SocialService {
                 .collect(Collectors.toList());
 
         if (followeeIds.isEmpty()) {
-            return Optional.empty();
+            throw new NoActivitiesFoundException();
         }
 
         return activityRepository.findTopByUserIdInOrderByCreatedAtDesc(followeeIds);
