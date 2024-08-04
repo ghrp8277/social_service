@@ -103,7 +103,7 @@ public class SocialService {
     }
 
     @Transactional
-    public Post createPost(Long userId, String title, String author, String accountName, String content, Long stockCode) {
+    public Post createPost(Long userId, String title, String author, String accountName, String content, String stockCode) {
         Post post = new Post();
         post.setUserId(userId);
         post.setTitle(title);

@@ -66,7 +66,7 @@ message CreatePostRequest {
     string author = 3;
     string accountName = 4;
     string content = 5;
-    uint64 stockCode = 6;
+    string stockCode = 6;
 }
 
 message UpdatePostRequest {
