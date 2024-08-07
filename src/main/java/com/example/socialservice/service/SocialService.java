@@ -16,6 +16,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 @Service
 public class SocialService {
@@ -44,6 +46,7 @@ public class SocialService {
     }
 
     @Transactional
+    @CacheEvict(value = "followers", key = "#followerId")
     public Follow followUser(Long followerId, Long followeeId) {
         if (followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
             throw new FollowAlreadyExistsException();
@@ -58,6 +61,7 @@ public class SocialService {
     }
 
     @Transactional
+    @CacheEvict(value = "followers", key = "#followerId")
     public Follow unfollowUser(Long followerId, Long followeeId) {
         Follow follow = followRepository.findByFollowerIdAndFolloweeId(followerId, followeeId).orElse(null);
 
@@ -71,16 +75,18 @@ public class SocialService {
 
         throw new NoFollowRelationshipException();
     }
-
+    @Cacheable(value = "followers", key = "#userId")
     public List<Follow> getFollowers(Long userId) {
         return followRepository.findByFolloweeId(userId);
     }
 
+    @Cacheable(value = "following", key = "#userId")
     public List<Follow> getFollowing(Long userId) {
         return followRepository.findByFollowerId(userId);
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "posts", key = "#id")
     public Optional<PostDto> getPostById(Long id) {
         Optional<Post> post = postRepository.findById(id);
 
@@ -97,12 +103,14 @@ public class SocialService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "searchPosts", key = "#keyword.concat('-').concat(#page).concat('-').concat(#size)")
     public Page<Post> searchPosts(String keyword, int page, int size) {
         PageRequest pageRequest = PageRequest.of(page, size);
         return postRepository.findByTitleContainingOrAuthorContainingOrContentContaining(keyword, keyword, keyword, pageRequest);
     }
 
     @Transactional
+    @CacheEvict(value = "posts", allEntries = true)
     public Post createPost(Long userId, String title, String author, String accountName, String content, String stockCode) {
         Post post = new Post();
         post.setUserId(userId);
@@ -122,6 +130,7 @@ public class SocialService {
     }
 
     @Transactional
+    @CacheEvict(value = "posts", key = "#postId")
     public Post updatePost(Long postId, Long userId, String title, String content) {
         Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
         if (!post.getUserId().equals(userId)) {
@@ -135,6 +144,7 @@ public class SocialService {
     }
 
     @Transactional
+    @CacheEvict(value = "posts", key = "#postId")
     public void deletePost(Long postId, Long userId) {
         Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
         if (!post.getUserId().equals(userId)) {
@@ -300,6 +310,7 @@ public class SocialService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "feedActivities", key = "#userId.concat('-').concat(#page).concat('-').concat(#size)")
     public Page<Activity> getFeedActivities(Long userId, int page, int size) {
         List<Long> followeeIds = followRepository.findByFollowerId(userId).stream()
                 .map(Follow::getFolloweeId)

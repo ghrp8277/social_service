@@ -3,10 +3,11 @@ package com.example.socialservice;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 
 @SpringBootApplication
+@EnableCaching
 public class SocialServiceApplication {
-
     public static void main(String[] args) {
         Dotenv dotenv = Dotenv.load();
 
@@ -16,5 +17,4 @@ public class SocialServiceApplication {
 
         SpringApplication.run(SocialServiceApplication.class, args);
     }
-
 }

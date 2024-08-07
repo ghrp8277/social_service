@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: social-deployment
+  namespace: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: social
+  template:
+    metadata:
+      labels:
+        app: social
+    spec:
+      hostNetwork: true
+      containers:
+        - name: spring-social-container
+          image: 192.168.0.212:5555/spring-social:20240807-140604
+          ports:
+            - name: grpc
+              containerPort: 3093
+          volumeMounts:
+            - name: social-logs
+              mountPath: /usr/src/main/logs
+          env:
+            - name: DATABASE_HOST
+              value: "social-mysql-master-service"
+            - name: DATABASE_PORT
+              value: "3306"
+            - name: DATABASE_USER
+              value: root
+            - name: DATABASE_PASSWORD
+              value: testtest
+
+        - name: mysql-master-container
+          image: 192.168.0.212:5555/mysql:latest
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: testtest
+            - name: MYSQL_DATABASE
+              value: main
+            - name: MYSQL_ALLOW_EMPTY_PASSWORD
+              value: "no"
+            - name: MYSQL_ROOT_HOST
+              value: "%"
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: social-mysql-master-data
+              mountPath: /var/lib/mysql
+
+        - name: phpmyadmin-container
+          image: 192.168.0.212:5555/phpmyadmin/phpmyadmin
+          ports:
+            - containerPort: 80
+          env:
+            - name: PMA_HOST
+              value: "social-mysql-master-service"
+            - name: PMA_PORT
+              value: "3306"
+            - name: PMA_USER
+              value: root
+            - name: PMA_PASSWORD
+              value: testtest
+
+        - name: redis-container
+          image: 192.168.0.212:5555/redis:latest
+          ports:
+            - containerPort: {{ .Values.redis.master.env.port }}
+          volumeMounts:
+            - name: social-redis-data
+              mountPath: {{ .Values.redis.master.volume.mountPath }}
+
+        - name: redis-gui-container
+          image: 192.168.0.212:5555/rediscommander/redis-commander:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: REDIS_HOSTS
+              value: "social-redis-service"
+            - name: USER
+              value: {{ .Values.redis.master.env.user }}
+            - name: PASSWORD
+              value: {{ .Values.redis.master.env.password }}
+
+        - name: fluent-bit
+          image: 192.168.0.212:5555/fluent/fluent-bit
+          volumeMounts:
+            - name: social-fluent-config
+              mountPath: /fluent-bit/etc/fluent-bit.conf
+              subPath: fluent-bit.conf
+            - name: social-logs
+              mountPath: /usr/src/main/logs
+
+      volumes:
+        - name: social-logs
+          persistentVolumeClaim:
+            claimName: social-logs-pvc
+        - name: social-mysql-master-data
+          persistentVolumeClaim:
+            claimName: social-mysql-master-data-pvc
+        - name: social-redis-data
+          persistentVolumeClaim:
+            claimName: social-redis-data-pvc
+        - name: social-fluent-config
+          configMap:
+            name: social-fluent-bit-config
