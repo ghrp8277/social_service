@@ -13,7 +13,6 @@ spec:
       labels:
         app: social
     spec:
-      hostNetwork: true
       containers:
         - name: spring-social-container
           image: 192.168.0.212:5555/spring-social:20240807-140604
