@@ -7,6 +7,7 @@ option java_outer_classname = "SocialProto";
 package social;
 
 service SocialService {
+    rpc Check (HealthCheckRequest) returns (HealthCheckResponse);
     rpc FollowUser(FollowUserRequest) returns (Response);
     rpc UnfollowUser(UnfollowRequest) returns (Response);
     rpc GetFollowers(GetFollowersRequest) returns (Response);
@@ -29,6 +30,20 @@ service SocialService {
     rpc GetFeedActivities(GetFeedActivitiesRequest) returns (Response);
     rpc MarkActivityAsRead(MarkActivityAsReadRequest) returns (Response);
     rpc getLatestActivityForFollowees(GetLatestActivityRequest) returns (Response);
+}
+
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+    SERVICE_UNKNOWN = 3;
+  }
+  ServingStatus status = 1;
 }
 
 message FollowUserRequest {
