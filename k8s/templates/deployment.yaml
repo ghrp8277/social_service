@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: spring-social-container
-          image: 192.168.0.212:5555/spring-social:20240812-183612
+          image: 192.168.0.212:5555/spring-social:20240812-224228
           ports:
             - name: grpc
               containerPort: 3093
