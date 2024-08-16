@@ -8,16 +8,18 @@ import com.example.socialservice.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.CacheEvict;
 
 @Service
 public class SocialService {
@@ -41,12 +43,14 @@ public class SocialService {
     @Autowired
     private PostStockRepository postStockRepository;
 
+    @Autowired
+    private UserSyncInfoRepository userSyncInfoRepository;
+
     public PostDto convertToDto(Post post) {
         return PostDto.fromEntity(post);
     }
 
     @Transactional
-    @CacheEvict(value = "followers", key = "#followerId")
     public Follow followUser(Long followerId, Long followeeId) {
         if (followRepository.existsByFollowerIdAndFolloweeId(followerId, followeeId)) {
             throw new FollowAlreadyExistsException();
@@ -61,7 +65,6 @@ public class SocialService {
     }
 
     @Transactional
-    @CacheEvict(value = "followers", key = "#followerId")
     public Follow unfollowUser(Long followerId, Long followeeId) {
         Follow follow = followRepository.findByFollowerIdAndFolloweeId(followerId, followeeId).orElse(null);
 
@@ -75,42 +78,51 @@ public class SocialService {
 
         throw new NoFollowRelationshipException();
     }
-    @Cacheable(value = "followers", key = "#userId")
+
     public List<Follow> getFollowers(Long userId) {
         return followRepository.findByFolloweeId(userId);
     }
 
-    @Cacheable(value = "following", key = "#userId")
     public List<Follow> getFollowing(Long userId) {
         return followRepository.findByFollowerId(userId);
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "posts", key = "#id")
-    public Optional<PostDto> getPostById(Long id) {
+    public Optional<PostDto> getPostById(Long id, Long userId) {
         Optional<Post> post = postRepository.findById(id);
 
         if (post.isEmpty()) {
             throw new PostNotFoundException();
         }
-        return post.map(PostDto::fromEntityWithComments);
+        return post.map(p -> {
+            PostDto postDto = PostDto.fromEntityWithComments(p);
+
+            if (postDto.getComments() != null) {
+                postDto.getComments().forEach(commentDto -> {
+                    boolean isLikedByUser = likeRepository.findByUserIdAndCommentId(userId, commentDto.getId()).isPresent();
+                    commentDto.setLikedByUser(isLikedByUser);
+                });
+            }
+
+            return postDto;
+        });
     }
 
     @Transactional(readOnly = true)
-    public Page<Post> getPosts(int page, int size) {
+    public Page<Post> getPosts(String code, int page, int size) {
         PageRequest pageRequest = PageRequest.of(page, size);
-        return postRepository.findAllPosts(pageRequest);
+        return postStockRepository.findByStockCode(code)
+                .map(postStock -> postRepository.findByPostStock(postStock, pageRequest))
+                .orElse(Page.empty());
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "searchPosts", key = "#keyword.concat('-').concat(#page).concat('-').concat(#size)")
     public Page<Post> searchPosts(String keyword, int page, int size) {
         PageRequest pageRequest = PageRequest.of(page, size);
         return postRepository.findByTitleContainingOrAuthorContainingOrContentContaining(keyword, keyword, keyword, pageRequest);
     }
 
     @Transactional
-    @CacheEvict(value = "posts", allEntries = true)
     public Post createPost(Long userId, String title, String author, String accountName, String content, String stockCode) {
         Post post = new Post();
         post.setUserId(userId);
@@ -130,7 +142,6 @@ public class SocialService {
     }
 
     @Transactional
-    @CacheEvict(value = "posts", key = "#postId")
     public Post updatePost(Long postId, Long userId, String title, String content) {
         Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
         if (!post.getUserId().equals(userId)) {
@@ -144,7 +155,6 @@ public class SocialService {
     }
 
     @Transactional
-    @CacheEvict(value = "posts", key = "#postId")
     public void deletePost(Long postId, Long userId) {
         Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
         if (!post.getUserId().equals(userId)) {
@@ -240,19 +250,20 @@ public class SocialService {
     }
 
     @Transactional
-    public Comment createComment(Long postId, Long userId, String content) {
+    public Comment createComment(Long postId, Long userId, String username, String content) {
         Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
         Comment comment = new Comment();
         comment.setPost(post); // Post 객체를 설정
         comment.setUserId(userId);
         comment.setContent(content);
+        comment.setUsername(username);
         Comment savedComment = commentRepository.save(comment);
         logActivity(userId, "comment", savedComment.getId(), String.format("User %d created a comment with ID %d", userId, savedComment.getId()));
         return savedComment;
     }
 
     @Transactional
-    public Comment createReply(Long postId, Long userId, Long parentCommentId, String content) {
+    public Comment createReply(Long postId, Long userId, String username, Long parentCommentId, String content) {
         Post post = postRepository.findById(postId).orElseThrow(PostNotFoundException::new);
         Comment parentComment = commentRepository.findById(parentCommentId).orElseThrow(ParentCommentNotFoundException::new);
         Comment reply = new Comment();
@@ -260,6 +271,7 @@ public class SocialService {
         reply.setUserId(userId);
         reply.setContent(content);
         reply.setParentComment(parentComment);
+        reply.setUsername(username);
         Comment savedReply = commentRepository.save(reply);
         logActivity(userId, "reply", savedReply.getId(), String.format("User %d replied to comment ID %d with new comment ID %d", userId, parentCommentId, savedReply.getId()));
         return savedReply;
@@ -278,13 +290,28 @@ public class SocialService {
     }
 
     @Transactional
-    public void deleteComment(Long commentId, Long userId) {
+    public List<Long> deleteComment(Long commentId, Long userId) {
         Comment comment = commentRepository.findById(commentId).orElseThrow(CommentNotFoundException::new);
+
         if (!comment.getUserId().equals(userId)) {
             throw new UnauthorizedException(ErrorMessages.UNAUTHORIZED_DELETE_COMMENT);
         }
+
+        List<Long> deletedCommentIds = new ArrayList<>();
+        deletedCommentIds.add(commentId);
+
+        likeRepository.deleteByCommentId(commentId);
+
+        List<Comment> replies = commentRepository.findByParentCommentId(commentId);
+        for (Comment reply : replies) {
+            likeRepository.deleteByCommentId(reply.getId());
+            commentRepository.deleteById(reply.getId());
+            deletedCommentIds.add(reply.getId());
+        }
+
         commentRepository.deleteById(commentId);
         logActivity(userId, "delete_comment", commentId, String.format("User %d deleted comment with ID %d", userId, commentId));
+        return deletedCommentIds;
     }
 
     @Transactional
@@ -310,7 +337,6 @@ public class SocialService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "feedActivities", key = "#userId.concat('-').concat(#page).concat('-').concat(#size)")
     public Page<Activity> getFeedActivities(Long userId, int page, int size) {
         List<Long> followeeIds = followRepository.findByFollowerId(userId).stream()
                 .map(Follow::getFolloweeId)
@@ -335,6 +361,20 @@ public class SocialService {
         }
 
         return activityRepository.findTopByUserIdInOrderByCreatedAtDesc(followeeIds);
+    }
+
+    @Transactional
+    public UserSyncInfo createUserSyncInfo(Long userId, String username, boolean active) {
+        UserSyncInfo userSyncInfo = new UserSyncInfo();
+        userSyncInfo.setUserId(userId);
+        userSyncInfo.setUsername(username);
+        userSyncInfo.setActive(active);
+
+        return userSyncInfoRepository.save(userSyncInfo);
+    }
+
+    public Page<UserSyncInfo> getUnfollowedUsers(Long followerId, Pageable pageable) {
+        return userSyncInfoRepository.findUsersNotFollowedBy(followerId, pageable);
     }
 
     private void logActivity(Long userId, String type, Long referenceId, String message) {

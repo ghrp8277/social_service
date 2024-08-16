@@ -13,6 +13,8 @@ public class CommentDto {
     private Long parentCommentId;
     private Long postId;
     private Long userId;
+    private String username;
+    private boolean isLikedByUser;
 
     public static CommentDto fromEntity(Comment comment) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
@@ -24,6 +26,7 @@ public class CommentDto {
         dto.setParentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null);
         dto.setPostId(comment.getPost().getId());
         dto.setUserId(comment.getUserId());
+        dto.setUsername(comment.getUsername());
         return dto;
     }
 }

@@ -3,16 +3,14 @@ package com.example.socialservice.grpc;
 import com.example.grpc.*;
 import com.example.socialservice.annotation.GrpcExceptionHandler;
 import com.example.socialservice.dto.PostDto;
-import com.example.socialservice.entity.Activity;
-import com.example.socialservice.entity.Comment;
-import com.example.socialservice.entity.Follow;
-import com.example.socialservice.entity.Post;
+import com.example.socialservice.entity.*;
 import com.example.socialservice.service.SocialService;
 import com.example.socialservice.util.GrpcResponseHelper;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -22,6 +20,8 @@ import java.util.Map;
 
 @GrpcService
 public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
+    private final String DEFAULT_RESULTS = "results";
+
     @Autowired
     private SocialService socialService;
 
@@ -35,7 +35,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("follower_id", follow.getFollowerId());
         response.put("followee_id", follow.getFolloweeId());
-        grpcResponseHelper.sendJsonResponse("follow", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -45,7 +45,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("follower_id", follow.getFollowerId());
         response.put("followee_id", follow.getFolloweeId());
-        grpcResponseHelper.sendJsonResponse("unfollow", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -56,13 +56,13 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
 
         Map<String, Object> response = new HashMap<>();
         response.put("followerIds", followerIds);
-        grpcResponseHelper.sendJsonResponse("followers", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
     @GrpcExceptionHandler
     public void getPosts(GetPostsRequest request, StreamObserver<Response> responseObserver) {
-        Page<Post> postsPage = socialService.getPosts(request.getPage(), request.getPageSize());
+        Page<Post> postsPage = socialService.getPosts(request.getCode(), request.getPage(), request.getPageSize());
         List<PostDto> postDtos = postsPage.getContent().stream()
             .map(socialService::convertToDto)
             .collect(Collectors.toList());
@@ -72,14 +72,17 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         response.put("total_elements", postsPage.getTotalElements());
         response.put("current_page", postsPage.getNumber());
         response.put("posts", postDtos);
-        grpcResponseHelper.sendJsonResponse("posts", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
     @GrpcExceptionHandler
     public void getPostById(GetPostByIdRequest request, StreamObserver<Response> responseObserver) {
-        PostDto postDto = socialService.getPostById(request.getPostId()).get();
-        grpcResponseHelper.sendJsonResponse("post", postDto, responseObserver);
+        PostDto postDto = socialService.getPostById(
+                request.getPostId(),
+                request.getUserId()
+        ).get();
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, postDto, responseObserver);
     }
 
     @Override
@@ -95,7 +98,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         response.put("total_elements", postsPage.getTotalElements());
         response.put("current_page", postsPage.getNumber());
         response.put("posts", postDtos);
-        grpcResponseHelper.sendJsonResponse("posts", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -114,7 +117,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         response.put("user_id", post.getUserId());
         response.put("post_stock_name", post.getPostStock().getStockName());
         response.put("post_stock_code", post.getPostStock().getStockCode());
-        grpcResponseHelper.sendJsonResponse("post", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -124,7 +127,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("post_id", post.getId());
         response.put("user_id", post.getUserId());
-        grpcResponseHelper.sendJsonResponse("post", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -134,7 +137,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("post_id", request.getPostId());
         response.put("message", "Post deleted successfully");
-        grpcResponseHelper.sendJsonResponse("delete_post", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -144,7 +147,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("post_id", post.getId());
         response.put("views", post.getViews());
-        grpcResponseHelper.sendJsonResponse("post_views", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -157,7 +160,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("post_id", post.getId());
         response.put("likes", post.getLikes());
-        grpcResponseHelper.sendJsonResponse("post_likes", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -170,17 +173,29 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("post_id", post.getId());
         response.put("likes", post.getLikes());
-        grpcResponseHelper.sendJsonResponse("post_likes", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
     @GrpcExceptionHandler
     public void createComment(CreateCommentRequest request, StreamObserver<Response> responseObserver) {
-        Comment comment = socialService.createComment(request.getPostId(), request.getUserId(), request.getContent());
+        Comment comment = socialService.createComment(
+                request.getPostId(),
+                request.getUserId(),
+                request.getUsername(),
+                request.getContent()
+        );
         Map<String, Object> response = new HashMap<>();
-        response.put("comment_id", comment.getId());
-        response.put("post_id", comment.getPost().getId());
-        grpcResponseHelper.sendJsonResponse("comment", response, responseObserver);
+        response.put("id", comment.getId());
+        response.put("postId", comment.getPost().getId());
+        response.put("userId", comment.getUserId());
+        response.put("content", comment.getContent());
+        response.put("createdAt", comment.getCreatedAt().toString());
+        response.put("likes", comment.getLikes());
+        response.put("username", comment.getUsername());
+        response.put("parentCommentId", comment.getParentComment() != null ? comment.getParentComment().getId() : null);
+        response.put("likedByUser", false);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -190,17 +205,16 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("comment_id", comment.getId());
         response.put("content", comment.getContent());
-        grpcResponseHelper.sendJsonResponse("update_comment", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
     @GrpcExceptionHandler
     public void deleteComment(DeleteCommentRequest request, StreamObserver<Response> responseObserver) {
-        socialService.deleteComment(request.getCommentId(), request.getUserId());
+        List<Long> deletedCommentIds = socialService.deleteComment(request.getCommentId(), request.getUserId());
         Map<String, Object> response = new HashMap<>();
-        response.put("comment_id", request.getCommentId());
-        response.put("message", "Comment deleted successfully");
-        grpcResponseHelper.sendJsonResponse("delete_comment", response, responseObserver);
+        response.put("deletedCommentIds", deletedCommentIds);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -210,7 +224,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("comment_id", comment.getId());
         response.put("likes", comment.getLikes());
-        grpcResponseHelper.sendJsonResponse("comment_likes", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -220,18 +234,30 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("comment_id", comment.getId());
         response.put("likes", comment.getLikes());
-        grpcResponseHelper.sendJsonResponse("comment_likes", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
     @GrpcExceptionHandler
     public void createReply(CreateReplyRequest request, StreamObserver<Response> responseObserver) {
-        Comment reply = socialService.createReply(request.getPostId(), request.getUserId(), request.getParentCommentId(), request.getContent());
+        Comment comment = socialService.createReply(
+                request.getPostId(),
+                request.getUserId(),
+                request.getUsername(),
+                request.getParentCommentId(),
+                request.getContent()
+        );
         Map<String, Object> response = new HashMap<>();
-        response.put("reply_id", reply.getId());
-        response.put("post_id", reply.getPost().getId());
-        response.put("parent_comment_id", reply.getParentComment().getId());
-        grpcResponseHelper.sendJsonResponse("reply", response, responseObserver);
+        response.put("id", comment.getId());
+        response.put("postId", comment.getPost().getId());
+        response.put("userId", comment.getUserId());
+        response.put("content", comment.getContent());
+        response.put("createdAt", comment.getCreatedAt().toString());
+        response.put("likes", comment.getLikes());
+        response.put("username", comment.getUsername());
+        response.put("parentCommentId", comment.getParentComment() != null ? comment.getParentComment().getId() : null);
+        response.put("likedByUser", false);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -245,8 +271,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         response.put("total_elements", activitiesPage.getTotalElements());
         response.put("current_page", activitiesPage.getNumber());
         response.put("activities", activities);
-
-        grpcResponseHelper.sendJsonResponse("unread_activities", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -261,7 +286,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         response.put("current_page", activitiesPage.getNumber());
         response.put("activities", activities);
 
-        grpcResponseHelper.sendJsonResponse("activities", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -271,7 +296,7 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         Map<String, Object> response = new HashMap<>();
         response.put("activity_id", request.getActivityId());
         response.put("message", "Activity marked as read");
-        grpcResponseHelper.sendJsonResponse("mark_as_read", response, responseObserver);
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
     @Override
@@ -279,6 +304,57 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
     public void getLatestActivityForFollowees(GetLatestActivityRequest request, StreamObserver<Response> responseObserver) {
         Optional<Activity> latestActivityOptional = socialService.getLatestActivityForFollowees(request.getUserId());
         Activity latestActivity = latestActivityOptional.orElse(null);
-        grpcResponseHelper.sendJsonResponse("latest_activity", latestActivity, responseObserver);
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", latestActivity != null);
+
+        if (latestActivityOptional.isPresent()) {
+            response.put("activity_id", latestActivity.getId());
+            response.put("user_id", latestActivity.getUserId());
+            response.put("type", latestActivity.getType());
+            response.put("reference_id", latestActivity.getReferenceId());
+            response.put("message", latestActivity.getMessage());
+            response.put("created_at", latestActivity.getCreatedAt().toString());
+            response.put("is_read", latestActivity.isRead());
+        }
+
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
+    }
+
+    @Override
+    @GrpcExceptionHandler
+    public void createUserSyncInfo(CreateUserSyncInfoRequest request, StreamObserver<Response> responseObserver) {
+        UserSyncInfo userSyncInfo = socialService.createUserSyncInfo(
+                request.getUserId(),
+                request.getUsername(),
+                request.getActive()
+        );
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", userSyncInfo.getId());
+        response.put("username", userSyncInfo.getUsername());
+        response.put("user_id", userSyncInfo.getUserId());
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
+    }
+
+    @Override
+    @GrpcExceptionHandler
+    public void getUnfollowedUsers(GetUnfollowedUsersRequest request, StreamObserver<Response> responseObserver) {
+        Page<UserSyncInfo> unfollowedUsersPage = socialService.getUnfollowedUsers(request.getUserId(),
+                PageRequest.of(request.getPage(), request.getPageSize()));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("users", unfollowedUsersPage.getContent().stream().map(userSyncInfo -> {
+            Map<String, Object> userMap = new HashMap<>();
+            userMap.put("userId", userSyncInfo.getUserId());
+            userMap.put("username", userSyncInfo.getUsername());
+            userMap.put("active", userSyncInfo.isActive());
+            userMap.put("lastSyncedAt", userSyncInfo.getLastSyncedAt().toString());
+            return userMap;
+        }).collect(Collectors.toList()));
+
+        response.put("totalPages", unfollowedUsersPage.getTotalPages());
+        response.put("totalElements", unfollowedUsersPage.getTotalElements());
+        response.put("currentPage", unfollowedUsersPage.getNumber());
+
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 }

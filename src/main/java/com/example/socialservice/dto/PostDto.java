@@ -21,24 +21,15 @@ public class PostDto {
     private List<CommentDto> comments;
 
     public static PostDto fromEntity(Post post) {
-        PostDto dto = new PostDto();
-        dto.setId(post.getId());
-        dto.setAccountName(post.getAccountName());
-        dto.setAuthor(post.getAuthor());
-        dto.setContent(post.getContent());
-        dto.setCreatedAt(post.getCreatedAt().toString());
-        dto.setLikes(post.getLikes());
-        dto.setTitle(post.getTitle());
-        dto.setUserId(post.getUserId());
-        dto.setViews(post.getViews());
-        return dto;
+        return fromEntityWithComments(post, false);
     }
 
     public static PostDto fromEntityWithComments(Post post) {
+        return fromEntityWithComments(post, true);
+    }
+
+    private static PostDto fromEntityWithComments(Post post, boolean includeComments) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-        List<CommentDto> commentDtos = post.getComments().stream()
-            .map(CommentDto::fromEntity)
-            .collect(Collectors.toList());
 
         PostDto dto = new PostDto();
         dto.setId(post.getId());
@@ -50,8 +41,16 @@ public class PostDto {
         dto.setTitle(post.getTitle());
         dto.setUserId(post.getUserId());
         dto.setViews(post.getViews());
-        dto.setComments(commentDtos);
+
+        if (includeComments && post.getComments() != null) {
+            List<CommentDto> commentDtos = post.getComments().stream()
+                    .map(CommentDto::fromEntity)
+                    .collect(Collectors.toList());
+            dto.setComments(commentDtos);
+        }
+
         return dto;
     }
 }
+
 
