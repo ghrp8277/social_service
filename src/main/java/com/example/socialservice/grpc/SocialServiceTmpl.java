@@ -29,6 +29,15 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
     private GrpcResponseHelper grpcResponseHelper;
 
     @Override
+    public void check(HealthCheckRequest request, StreamObserver<HealthCheckResponse> responseObserver) {
+        HealthCheckResponse response = HealthCheckResponse.newBuilder()
+                .setStatus(HealthCheckResponse.ServingStatus.SERVING)
+                .build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
+    @Override
     @GrpcExceptionHandler
     public void followUser(FollowUserRequest request, StreamObserver<Response> responseObserver) {
         Follow follow = socialService.followUser(request.getFollowerId(), request.getFolloweeId());
