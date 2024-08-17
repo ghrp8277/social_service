@@ -94,6 +94,7 @@ public class SocialService {
         if (post.isEmpty()) {
             throw new PostNotFoundException();
         }
+
         return post.map(p -> {
             PostDto postDto = PostDto.fromEntityWithComments(p);
 
@@ -106,6 +107,17 @@ public class SocialService {
 
             return postDto;
         });
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<PostDto> getPostByIdAndNotLogin(Long id) {
+        Optional<Post> post = postRepository.findById(id);
+
+        if (post.isEmpty()) {
+            throw new PostNotFoundException();
+        }
+
+        return post.map(PostDto::fromEntityWithComments);
     }
 
     @Transactional(readOnly = true)

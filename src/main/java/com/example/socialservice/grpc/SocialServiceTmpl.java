@@ -96,6 +96,13 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
 
     @Override
     @GrpcExceptionHandler
+    public void getPostByIdAndNotLogin(GetPostByIdAndNotLoginRequest request, StreamObserver<Response> responseObserver) {
+        PostDto postDto = socialService.getPostByIdAndNotLogin(request.getPostId()).get();
+        grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, postDto, responseObserver);
+    }
+
+    @Override
+    @GrpcExceptionHandler
     public void searchPosts(SearchPostsRequest request, StreamObserver<Response> responseObserver) {
         Page<Post> postsPage = socialService.searchPosts(request.getKeyword(), request.getPage(), request.getPageSize());
         List<PostDto> postDtos = postsPage.getContent().stream()
@@ -273,13 +280,25 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
     @GrpcExceptionHandler
     public void getUnreadFeedActivities(GetUnreadFeedActivitiesRequest request, StreamObserver<Response> responseObserver) {
         Page<Activity> activitiesPage = socialService.getUnreadFeedActivities(request.getUserId(), request.getPage(), request.getPageSize());
-        List<Activity> activities = activitiesPage.getContent();
+
+        List<Map<String, Object>> activityMaps = activitiesPage.getContent().stream().map(activity -> {
+            Map<String, Object> activityMap = new HashMap<>();
+            activityMap.put("id", activity.getId());
+            activityMap.put("userId", activity.getUserId());
+            activityMap.put("type", activity.getType());
+            activityMap.put("referenceId", activity.getReferenceId());
+            activityMap.put("message", activity.getMessage());
+            activityMap.put("createdAt", activity.getCreatedAt().toString());
+            activityMap.put("isRead", activity.isRead());
+            return activityMap;
+        }).collect(Collectors.toList());
 
         Map<String, Object> response = new HashMap<>();
         response.put("total_pages", activitiesPage.getTotalPages());
         response.put("total_elements", activitiesPage.getTotalElements());
         response.put("current_page", activitiesPage.getNumber());
-        response.put("activities", activities);
+        response.put("activities", activityMaps);
+
         grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);
     }
 
@@ -317,13 +336,13 @@ public class SocialServiceTmpl extends SocialServiceGrpc.SocialServiceImplBase {
         response.put("success", latestActivity != null);
 
         if (latestActivityOptional.isPresent()) {
-            response.put("activity_id", latestActivity.getId());
-            response.put("user_id", latestActivity.getUserId());
+            response.put("id", latestActivity.getId());
+            response.put("userId", latestActivity.getUserId());
             response.put("type", latestActivity.getType());
-            response.put("reference_id", latestActivity.getReferenceId());
+            response.put("referenceId", latestActivity.getReferenceId());
             response.put("message", latestActivity.getMessage());
-            response.put("created_at", latestActivity.getCreatedAt().toString());
-            response.put("is_read", latestActivity.isRead());
+            response.put("createdAt", latestActivity.getCreatedAt().toString());
+            response.put("isRead", latestActivity.isRead());
         }
 
         grpcResponseHelper.sendJsonResponse(DEFAULT_RESULTS, response, responseObserver);

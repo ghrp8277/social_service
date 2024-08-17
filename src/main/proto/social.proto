@@ -32,6 +32,7 @@ service SocialService {
     rpc GetLatestActivityForFollowees(GetLatestActivityRequest) returns (Response);
     rpc CreateUserSyncInfo(CreateUserSyncInfoRequest) returns (Response);
     rpc GetUnfollowedUsers(GetUnfollowedUsersRequest) returns (Response);
+    rpc GetPostByIdAndNotLogin(GetPostByIdAndNotLoginRequest) returns (Response);
 }
 
 message HealthCheckRequest {
@@ -65,6 +66,10 @@ message GetFollowersRequest {
 message GetPostByIdRequest {
     uint64 postId = 1;
     uint64 userId = 2;
+}
+
+message GetPostByIdAndNotLoginRequest {
+    uint64 postId = 1;
 }
 
 message GetPostsRequest {
