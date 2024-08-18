@@ -310,23 +310,18 @@ public class SocialService {
         }
 
         List<Long> deletedCommentIds = new ArrayList<>();
+        deletedCommentIds.add(commentId);
 
-        if (comment.getParentComment() != null) {
-            likeRepository.deleteByCommentId(commentId);
-            commentRepository.deleteById(commentId);
-            deletedCommentIds.add(commentId);
-        } else {
-            List<Comment> replies = commentRepository.findByParentCommentId(commentId);
-            for (Comment reply : replies) {
-                likeRepository.deleteByCommentId(reply.getId());
-                commentRepository.deleteById(reply.getId());
-                deletedCommentIds.add(reply.getId());
-            }
-            likeRepository.deleteByCommentId(commentId);
-            commentRepository.deleteById(commentId);
-            deletedCommentIds.add(commentId);
+        likeRepository.deleteByCommentId(commentId);
+
+        List<Comment> replies = commentRepository.findByParentCommentId(commentId);
+        for (Comment reply : replies) {
+            likeRepository.deleteByCommentId(reply.getId());
+            commentRepository.deleteById(reply.getId());
+            deletedCommentIds.add(reply.getId());
         }
 
+        commentRepository.deleteById(commentId);
         logActivity(userId, "delete_comment", commentId, String.format("User %d deleted comment with ID %d", userId, commentId));
         return deletedCommentIds;
     }
